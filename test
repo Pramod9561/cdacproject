@@ -1,0 +1,177 @@
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.MediaType;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class ChangeApprovalServiceImplTest {
+
+    @Mock
+    private RestClient sapiRestClient;
+    
+    @Mock
+    private RestClient.RequestHeadersSpec requestHeadersSpec;
+    
+    @Mock
+    private RestClient.RequestBodySpec requestBodySpec;
+    
+    @Mock
+    private RestClient.ResponseSpec responseSpec;
+    
+    @InjectMocks
+    private ChangeApprovalServiceImpl changeApprovalService;
+    
+    private ApproveChangeRequest request;
+    private String basePath = "/api/v1/approvals";
+
+    @BeforeEach
+    void setUp() {
+        request = new ApproveChangeRequest();
+        // Set up request object as needed
+    }
+
+    @Test
+    void approve_WhenSuccessful_ShouldReturnApprovalResponse() {
+        // Arrange
+        PendingChangeVo pendingChangeVo = new PendingChangeVo();
+        ApprovalData approvalData = new ApprovalData();
+        
+        ResponseEnvelope<PendingChangeVo> envelope = new ResponseEnvelope<>();
+        envelope.setData(pendingChangeVo);
+        
+        when(sapiRestClient.post()).thenReturn(requestBodySpec);
+        when(requestBodySpec.uri(basePath)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(ApproveChangeRequestEnvelope.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.accept(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.body(any(ParameterizedTypeReference.class))).thenReturn(envelope);
+        
+        // Act
+        ApprovalResponse response = changeApprovalService.approve(request);
+        
+        // Assert
+        assertNotNull(response);
+        assertNotNull(response.getData());
+        verify(sapiRestClient).post();
+        verify(requestBodySpec).uri(basePath);
+        verify(requestBodySpec).body(any(ApproveChangeRequestEnvelope.class));
+        verify(requestBodySpec).accept(MediaType.APPLICATION_JSON);
+    }
+
+    @Test
+    void approve_WhenEnvelopeIsNull_ShouldReturnNullData() {
+        // Arrange
+        when(sapiRestClient.post()).thenReturn(requestBodySpec);
+        when(requestBodySpec.uri(basePath)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(ApproveChangeRequestEnvelope.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.accept(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.body(any(ParameterizedTypeReference.class))).thenReturn(null);
+        
+        // Act
+        ApprovalResponse response = changeApprovalService.approve(request);
+        
+        // Assert
+        assertNotNull(response);
+        assertNull(response.getData());
+    }
+
+    @Test
+    void approve_WhenEnvelopeDataIsNull_ShouldReturnNullData() {
+        // Arrange
+        ResponseEnvelope<PendingChangeVo> envelope = new ResponseEnvelope<>();
+        envelope.setData(null);
+        
+        when(sapiRestClient.post()).thenReturn(requestBodySpec);
+        when(requestBodySpec.uri(basePath)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(ApproveChangeRequestEnvelope.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.accept(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.body(any(ParameterizedTypeReference.class))).thenReturn(envelope);
+        
+        // Act
+        ApprovalResponse response = changeApprovalService.approve(request);
+        
+        // Assert
+        assertNotNull(response);
+        assertNull(response.getData());
+    }
+
+    @Test
+    void approve_WhenRestClientResponseExceptionThrown_ShouldThrowResponseStatusException() {
+        // Arrange
+        RestClientResponseException restClientException = mock(RestClientResponseException.class);
+        when(restClientException.getResponseBodyAsString()).thenReturn("SAPI error");
+        
+        when(sapiRestClient.post()).thenReturn(requestBodySpec);
+        when(requestBodySpec.uri(basePath)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(ApproveChangeRequestEnvelope.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.accept(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.body(any(ParameterizedTypeReference.class)))
+                .thenThrow(restClientException);
+        
+        // Act & Assert
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> changeApprovalService.approve(request)
+        );
+        
+        assertTrue(exception.getMessage().contains("SAPI error"));
+        verify(restClientException).getResponseBodyAsString();
+    }
+
+    @Test
+    void approve_WhenGenericExceptionThrown_ShouldThrowResponseStatusException() {
+        // Arrange
+        Exception genericException = new Exception("Unexpected error");
+        
+        when(sapiRestClient.post()).thenReturn(requestBodySpec);
+        when(requestBodySpec.uri(basePath)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(ApproveChangeRequestEnvelope.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.accept(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.body(any(ParameterizedTypeReference.class)))
+                .thenThrow(genericException);
+        
+        // Act & Assert
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> changeApprovalService.approve(request)
+        );
+        
+        assertEquals(HttpStatus.BAD_GATEWAY, exception.getStatusCode());
+        assertTrue(exception.getMessage().contains("Failed to fetch AD group config"));
+    }
+
+    @Test
+    void approve_ShouldWrapRequestInEnvelope() {
+        // Arrange
+        ResponseEnvelope<PendingChangeVo> envelope = new ResponseEnvelope<>();
+        envelope.setData(new PendingChangeVo());
+        
+        when(sapiRestClient.post()).thenReturn(requestBodySpec);
+        when(requestBodySpec.uri(basePath)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(ApproveChangeRequestEnvelope.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.accept(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.body(any(ParameterizedTypeReference.class))).thenReturn(envelope);
+        
+        // Act
+        changeApprovalService.approve(request);
+        
+        // Assert
+        verify(requestBodySpec).body(argThat(arg -> 
+            arg instanceof ApproveChangeRequestEnvelope
+        ));
+    }
+}
