@@ -1,0 +1,301 @@
+package com.hsbc.ccaas.papi.controller;
+
+import com.hsbc.ccaas.papi.controller.api.AuditLogsApi;
+import com.hsbc.ccaas.papi.controller.model.AuditLogListResponse;
+import com.hsbc.ccaas.papi.controller.model.AuditLogResponse;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.time.OffsetDateTime;
+import java.util.List;
+
+@RestController
+public class AuditLogsController implements AuditLogsApi {
+
+    @Override
+    public ResponseEntity<AuditLogListResponse> listAuditLogs(
+            String actionKey,
+            String marketCode,
+            String roleName,
+            String performedBy,
+            String appKey,
+            String functionKey,
+            Boolean criticalIndicator,
+            OffsetDateTime fromDate,
+            OffsetDateTime toDate,
+            Integer offsetNumber,
+            Integer limitNumber
+    ) {
+
+        AuditLogResponse sample = new AuditLogResponse()
+                .id(101L)
+                .action(actionKey != null ? actionKey : "SUBMIT")
+                .market(marketCode)
+                .roleName(roleName)
+                .performedBy(performedBy)
+                .performedAt(OffsetDateTime.now());
+
+        AuditLogListResponse resp = new AuditLogListResponse()
+                .total(1)
+                .items(List.of(sample));
+
+        return ResponseEntity.ok(resp);
+    }
+
+    @Override
+    public ResponseEntity<AuditLogListResponse> getAuditLogsByChangeIdentifier(String changeIdentifier) {
+
+        AuditLogListResponse resp = new AuditLogListResponse()
+                .total(0)
+                .items(List.of());
+
+        return ResponseEntity.ok(resp);
+    }
+
+    @Override
+    public ResponseEntity<AuditLogListResponse> getAuditLogsByGroupIdentifier(String groupIdentifier) {
+
+        AuditLogListResponse resp = new AuditLogListResponse()
+                .total(0)
+                .items(List.of());
+
+        return ResponseEntity.ok(resp);
+    }
+}
+
+
+
+
+openapi: 3.0.3
+info:
+  title: Audit Logs API
+  version: 1.0.0
+
+servers:
+  - url: /
+
+tags:
+  - name: Audit Logs
+    description: Audit log APIs for admin approval workflow
+
+paths:
+  /papi/v1/audit-logs:
+    get:
+      tags:
+        - Audit Logs
+      operationId: listAuditLogs
+      summary: List audit logs with filters
+      description: Returns audit logs based on provided filters
+      parameters:
+        - name: actionKey
+          in: query
+          required: false
+          schema:
+            type: string
+            example: SUBMIT
+          description: Filter by action (SUBMIT, L1_APPROVE, L2_APPROVE, REJECT, CANCEL, DIRECT_SAVE)
+
+        - name: marketCode
+          in: query
+          required: false
+          schema:
+            type: string
+            example: IN
+          description: Filter by market code
+
+        - name: roleName
+          in: query
+          required: false
+          schema:
+            type: string
+            example: supervisor
+          description: Filter by role
+
+        - name: performedBy
+          in: query
+          required: false
+          schema:
+            type: string
+            example: pramod.k
+          description: Filter by user
+
+        - name: appKey
+          in: query
+          required: false
+          schema:
+            type: string
+            example: VOICE
+          description: Filter by app
+
+        - name: functionKey
+          in: query
+          required: false
+          schema:
+            type: string
+            example: TRADING
+          description: Filter by function
+
+        - name: criticalIndicator
+          in: query
+          required: false
+          schema:
+            type: boolean
+            example: true
+          description: Filter by criticality
+
+        - name: fromDate
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Date range filter start
+
+        - name: toDate
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Date range filter end
+
+        - name: offsetNumber
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            example: 0
+          description: Pagination offset
+
+        - name: limitNumber
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            example: 50
+          description: Pagination limit
+
+      responses:
+        "200":
+          description: List audit logs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditLogListResponse"
+        "400":
+          description: Bad request
+
+  /papi/v1/audit-logs-changes/{changeIdentifier}:
+    get:
+      tags:
+        - Audit Logs
+      operationId: getAuditLogsByChangeIdentifier
+      summary: Get audit trail for a specific change
+      parameters:
+        - name: changeIdentifier
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Audit logs for the change
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditLogListResponse"
+        "404":
+          description: Not found
+
+  /papi/v1/audit-logs-groups/{groupIdentifier}:
+    get:
+      tags:
+        - Audit Logs
+      operationId: getAuditLogsByGroupIdentifier
+      summary: Get audit history for AD group
+      parameters:
+        - name: groupIdentifier
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Audit logs for the group
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditLogListResponse"
+        "404":
+          description: Not found
+
+components:
+  schemas:
+    AuditLogListResponse:
+      type: object
+      properties:
+        total:
+          type: integer
+          example: 2
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditLogResponse"
+
+    AuditLogResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 101
+        pendingChangeId:
+          type: string
+          format: uuid
+        targetGroupIdentifier:
+          type: string
+          format: uuid
+        targetGroupName:
+          type: string
+          example: "AD_GROUP_1"
+        roleName:
+          type: string
+          example: supervisor
+        market:
+          type: string
+          example: IN
+        region:
+          type: string
+          example: APAC
+
+        action:
+          type: string
+          example: SUBMIT
+        changeType:
+          type: string
+          example: CONFIG_UPDATE
+
+        entityType:
+          type: string
+          example: FIELD
+        entityKey:
+          type: string
+          example: FUNCTION
+        oldValue:
+          type: string
+          example: "OLD"
+        newValue:
+          type: string
+          example: "NEW"
+
+        performedBy:
+          type: string
+          example: "pramod.k"
+        performedAt:
+          type: string
+          format: date-time
